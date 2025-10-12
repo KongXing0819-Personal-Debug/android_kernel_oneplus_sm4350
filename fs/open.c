@@ -445,10 +445,10 @@ out:
 }
 
 SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
+{
 #if defined(CONFIG_KSU) && defined(CONFIG_KSU_TRACEPOINT_HOOK)
 	trace_ksu_trace_faccessat_hook(&dfd, &filename, &mode, NULL);
 #endif
-{
 	return do_faccessat(dfd, filename, mode);
 }
 

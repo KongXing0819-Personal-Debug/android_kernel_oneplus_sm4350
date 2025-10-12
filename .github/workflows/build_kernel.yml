@@ -1,0 +1,61 @@
+name: Build Android Kernel with NDK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Kernel
+    runs-on: ubuntu-latest
+
+    env:
+      ARCH: arm64
+      SUBARCH: arm64
+      CLANG_TRIPLE: "aarch64-linux-gnu-"
+      CROSS_COMPILE: "aarch64-linux-gnu-"
+      KBUILD_BUILD_TIMESTAMP: "Mon Oct 20 00:00:00 CST 2025"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache NDK
+        uses: actions/cache@v4
+        with:
+          path: android-ndk-r25c
+          key: ${{ runner.os }}-ndk-r25c
+
+      - name: Cache build output
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: ${{ runner.os }}-build-${{ hashFiles('**/Makefile', '**/Kconfig*') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cpio libncurses5-dev libssl-dev lz4
+          if [ ! -d "android-ndk-r25c" ]; then
+            wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+            unzip android-ndk-r25c-linux.zip
+          fi
+          echo "NDK_HOME=$PWD/android-ndk-r25c" >> $GITHUB_ENV
+          echo "$PWD/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+
+      - name: Add KernelSU
+        run: |
+          ./ksu.sh
+
+      - name: Build Kernel
+        run: |
+          make O=build CC=clang LD=ld.lld AR=llvm-ar AS=llvm-as NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip -j$(nproc --all)
+
+      - name: Upload Kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-image
+          path: build/arch/arm64/boot/Image
