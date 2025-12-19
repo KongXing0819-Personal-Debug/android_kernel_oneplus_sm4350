@@ -63,7 +63,8 @@ jobs:
         run: |
           make O=build CC=clang LD=ld.lld AR=llvm-ar AS=llvm-as NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip -j$(nproc --all)
 
-      - name: 
+      - name: Move Kernel
+        run: |
           cp build/arch/arm64/boot/Image build/AnyKernel
 
       - name: Upload Kernel
